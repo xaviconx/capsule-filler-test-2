@@ -1,14 +1,14 @@
 # Stepper Loadcell Tester
 
-Banco de pruebas para controlar un NEMA 17 `17HS8401` con un `TMC2209` en modo `STEP/DIR`, leer una celda de carga de `100g` con `HX711`, y experimentar dosificacion de polvo por peso.
+Bench-test project for driving a NEMA 17 `17HS8401` with a `TMC2209` in `STEP/DIR` mode, reading a `100g` load cell through an `HX711`, and experimenting with weight-based powder dispensing.
 
 ## Hardware
 
-Placa inicial: DFRobot Romeo V2.2 / Arduino Leonardo compatible.
+Initial board: DFRobot Romeo V2.2 / Arduino Leonardo compatible.
 
-Pines por defecto:
+Default pins:
 
-| Senal | Pin Romeo/Leonardo |
+| Signal | Romeo/Leonardo pin |
 | --- | --- |
 | TMC2209 `STEP` | `A0` |
 | TMC2209 `DIR` | `A1` |
@@ -16,27 +16,27 @@ Pines por defecto:
 | HX711 `DT` | `D9` |
 | HX711 `SCK` | `D10` |
 
-Notas:
+Notes:
 
-- Usa fuente externa para el motor. No alimentes el NEMA 17 desde USB ni desde el regulador de la Romeo.
-- Une `GND` de la Romeo con `GND` de la fuente del TMC2209.
-- Ajusta la corriente del TMC2209 fisicamente antes de probar.
-- El firmware arranca con el driver deshabilitado.
+- Use an external motor supply. Do not power the NEMA 17 from USB or the Romeo regulator.
+- Tie Romeo `GND` and TMC2209 power-supply `GND` together.
+- Set TMC2209 current physically before testing.
+- Firmware boots with the driver disabled.
 
-## LED integrado
+## Built-in LED
 
-El LED integrado de la placa da feedback visual rapido:
+The board's built-in LED provides quick visual feedback:
 
-| Estado | Patron |
+| State | Pattern |
 | --- | --- |
-| `idle` / `done` | Pulso corto cada ~1.4 s |
-| Movimiento forward | Parpadeo corto encendido / largo apagado |
-| Movimiento reverse | Parpadeo largo encendido / corto apagado |
-| `step_validation` | Un parpadeo por cada pulso `STEP` |
-| `dosing_fast` | Parpadeo rapido |
-| `dosing_fine` | Pulso fino lento |
-| `settling` | 50/50 lento |
-| `error` | Parpadeo muy rapido |
+| `idle` / `done` | Short pulse every ~1.4 s |
+| Forward motion | Short on / long off blink |
+| Reverse motion | Long on / short off blink |
+| `step_validation` | One blink per `STEP` pulse |
+| `dosing_fast` | Fast blink |
+| `dosing_fine` | Slow fine pulse |
+| `settling` | Slow 50/50 blink |
+| `error` | Very fast blink |
 
 ## Firmware
 
@@ -47,7 +47,7 @@ pio run -e romeo_leonardo -t upload
 pio device monitor -b 115200
 ```
 
-Comandos seriales principales:
+Main serial commands:
 
 ```text
 status
@@ -75,20 +75,20 @@ scale sim 0|1
 dose 500 50
 ```
 
-El firmware emite un objeto JSON por linea con estado, peso, posicion, velocidad, configuracion y errores.
+The firmware emits one JSON object per line with state, weight, position, speed, config and error data.
 
-## Validacion lenta del stepper
+## Slow Stepper Validation
 
-Usa este modo para confirmar que `STEP`, `DIR`, `EN`, `VIO` y `GND` estan bien cableados antes de probar movimientos rapidos:
+Use this mode to confirm that `STEP`, `DIR`, `EN`, `VIO` and `GND` are wired correctly before trying faster motion:
 
 ```text
 validate 10 forward 500
 validate 10 reverse 500
 ```
 
-Eso manda 10 pulsos `STEP`, separados por 500 ms. El LED integrado prende una vez por cada pulso, asi puedes ver si la Romeo esta mandando pasos aunque el motor no se mueva.
+This sends 10 `STEP` pulses, spaced 500 ms apart. The built-in LED turns on once per pulse, so you can see whether the Romeo is actually sending steps even if the motor does not move.
 
-## Backend y UI
+## Backend and UI
 
 Backend:
 
@@ -108,31 +108,31 @@ npm install
 npm run dev
 ```
 
-Abre la URL de Vite. Por default la UI usa `http://127.0.0.1:8001` como backend y corre en el puerto `5174`.
+Open the Vite URL shown in the terminal. By default the UI talks to `http://127.0.0.1:8001` and runs on port `5174`.
 
-## Modo de dosificacion
+## Dose Mode
 
-`dose target_mg fine_window_mg` usa dos fases:
+`dose target_mg fine_window_mg` uses two phases:
 
-1. Avance rapido hasta `target_mg - fine_window_mg`.
-2. Avance fino por bursts, esperando `settle_ms` despues de cada burst para leer la bascula.
+1. Fast feed until `target_mg - fine_window_mg`.
+2. Fine burst feed, waiting `settle_ms` after every burst before reading the scale.
 
-El motor se detiene cuando:
+The motor stops when:
 
 ```text
 weight_mg >= target_mg - tolerance_mg
 ```
 
-Si se pasa del target, el estado final sera `done_overshoot`.
+If the dose overshoots the target, final state is `done_overshoot`.
 
-## Calibracion
+## Calibration
 
-Flujo recomendado con HX711 real:
+Recommended real-HX711 flow:
 
-1. Activa modo real con `scale sim 0`.
-2. Deja el plato vacio y ejecuta `tare`.
-3. Coloca una pesa de `50g`.
-4. Ejecuta `calibrate 50000`.
-5. Retira la pesa, ejecuta `tare` de nuevo si hace falta.
+1. Enable real scale mode with `scale sim 0`.
+2. Keep the pan empty and run `tare`.
+3. Place a `50g` reference weight.
+4. Run `calibrate 50000`.
+5. Remove the weight and run `tare` again if needed.
 
-El modo simulado esta activo por defecto para probar UI, stepper y algoritmo sin la celda conectada.
+Simulated scale mode is enabled by default so the UI, stepper and dosing algorithm can be tested without the load cell connected.
